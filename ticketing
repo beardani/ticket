@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>티켓팅 연습</title>
+
+<style>
+body {
+  margin: 0;
+  height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo";
+  background: #f5f5f5;
+}
+
+#buttonScreen {
+  position: fixed;
+  bottom: 8px;
+  right: 14px;
+}
+
+#ticketBtn {
+  width: 360px;
+  height: 48px;
+  border-radius: 12px;
+  border: none;
+  background: #d9d9d9;
+  color: #666;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+#queueScreen {
+  display: none;
+  width: 100%;
+  height: 100%;
+  background: white;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.queue-box {
+  margin-top: 40px;
+  padding: 28px;
+  border-radius: 16px;
+  background: #f7f7f7;
+  text-align: center;
+}
+
+.queue-number {
+  font-size: 48px;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.queue-info {
+  margin-top: 14px;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.7;
+}
+
+.retry-btn {
+  margin-top: 28px;
+  width: 100%;
+  height: 52px;
+  border-radius: 12px;
+  border: none;
+  background: #e5e5e5;
+  font-size: 15px;
+  font-weight: 600;
+}
+</style>
+</head>
+
+<body>
+
+<div id="buttonScreen">
+  <button id="ticketBtn">판매 예정</button>
+</div>
+
+<div id="queueScreen">
+  <p><b>접속 인원이 많아 대기 중입니다.</b></p>
+
+  <div class="queue-box">
+    <div>나의 대기순서</div>
+    <div class="queue-number" id="queueNum">-</div>
+    <div class="queue-info" id="queueInfo"></div>
+  </div>
+
+  <button class="retry-btn" onclick="resetAll()">다시 하기</button>
+</div>
+
+<script>
+const btn = document.getElementById("ticketBtn");
+const buttonScreen = document.getElementById("buttonScreen");
+const queueScreen = document.getElementById("queueScreen");
+const queueNum = document.getElementById("queueNum");
+const queueInfo = document.getElementById("queueInfo");
+
+let startTime = 0;
+let countdownTimer;
+let firstClickTime = null;
+let lastClickTime = null;
+let clickTimeout = null;
+
+// 설정값
+const TOTAL_USERS = 50000;
+const MACRO_USERS = 3000;   // 060ms
+const FAST_HUMAN = 12000;   // 60180ms
+const NORMAL_HUMAN = 15000; // 180~250ms
+
+function startCountdown() {
+  startTime = 0;
+  firstClickTime = null;
+  lastClickTime = null;
+
+  let time = 5;
+  btn.style.pointerEvents = "none";
+  btn.style.background = "#d9d9d9";
+  btn.style.color = "#666";
+  btn.innerText = "00:05";
+
+  countdownTimer = setInterval(() => {
+    time--;
+    btn.innerText = "00:" + String(time).padStart(2, "0");
+
+    if (time === 0) {
+      clearInterval(countdownTimer);
+      setTimeout(() => {
+        btn.style.background = "#3b5cff";
+        btn.style.color = "white";
+        btn.innerText = "예매하기";
+        btn.style.pointerEvents = "auto";
+        startTime = performance.now();
+      }, 800);
+    }
+  }, 1000);
+}
+
+startCountdown();
+
+btn.onclick = () => {
+  if (!startTime) return;
+
+  const now = performance.now();
+  if (!firstClickTime) firstClickTime = now;
+  lastClickTime = now;
+
+  clearTimeout(clickTimeout);
+  clickTimeout = setTimeout(processEntry, 220);
+};
+
+function processEntry() {
+  btn.style.pointerEvents = "none";
+
+  const ms = Math.floor(lastClickTime - startTime);
+  let order = TOTAL_USERS;
+
+  // 🔴 매크로 구간 (인간도 운으로 진입 가능)
+  if (ms <= 60) {
+    const ratio = ms / 60;
+    order = Math.floor(1 + ratio * MACRO_USERS);
+  }
+
+  // 🟠 초고수 인간
+  else if (ms <= 180) {
+    const ratio = (ms - 60) / 120;
+    order = Math.floor(
+      MACRO_USERS + ratio * FAST_HUMAN
+    );
+  }
+
+  // 🟢 평균 이전 인간
+  else if (ms <= 250) {
+    const ratio = (ms - 180) / 70;
+    order = Math.floor(
+      MACRO_USERS + FAST_HUMAN + ratio * NORMAL_HUMAN
+    );
+  }
+
+  // 🔵 평균 이후 (급격히 밀림)
+  else {
+    const slowRatio = Math.min((ms - 250) / 300, 1);
+    order = Math.floor(
+      MACRO_USERS + FAST_HUMAN + NORMAL_HUMAN +
+      slowRatio * (TOTAL_USERS - MACRO_USERS - FAST_HUMAN - NORMAL_HUMAN)
+    );
+  }
+
+  order = Math.min(order, TOTAL_USERS);
+
+  setTimeout(() => {
+    buttonScreen.style.display = "none";
+    queueScreen.style.display = "block";
+
+    queueNum.innerText = order.toLocaleString();
+    queueInfo.innerHTML =
+      반응속도: ${ms} ms<br> +
+      전체 접속자: ${TOTAL_USERS.toLocaleString()}명;
+  }, 800);
+}
+
+function resetAll() {
+  queueScreen.style.display = "none";
+  buttonScreen.style.display = "block";
+  clearInterval(countdownTimer);
+  clearTimeout(clickTimeout);
+  startCountdown();
+}
+</script>
+
+</body>
+</html>
