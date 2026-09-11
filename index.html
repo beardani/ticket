@@ -106,8 +106,8 @@ let clickTimeout = null;
 
 // 설정값
 const TOTAL_USERS = 50000;
-const MACRO_USERS = 3000;   // 060ms
-const FAST_HUMAN = 12000;   // 60180ms
+const MACRO_USERS = 3000;   // 0~60ms
+const FAST_HUMAN = 12000;   // 60~180ms
 const NORMAL_HUMAN = 15000; // 180~250ms
 
 function startCountdown() {
@@ -195,9 +195,9 @@ function processEntry() {
     queueScreen.style.display = "block";
 
     queueNum.innerText = order.toLocaleString();
-    queueInfo.innerHTML =
-      반응속도: ${ms} ms<br> +
-      전체 접속자: ${TOTAL_USERS.toLocaleString()}명;
+    
+    // 💡 수정된 부분: 템플릿 리터럴 적용
+    queueInfo.innerHTML = `반응속도: ${ms} ms<br>전체 접속자: ${TOTAL_USERS.toLocaleString()}명`;
   }, 800);
 }
 
